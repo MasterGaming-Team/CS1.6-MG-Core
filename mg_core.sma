@@ -11,13 +11,12 @@ new gPrefixMenu[] = "\d*MG* \r| \y"
 new gPrefixChat[] = "!g[*MG*] !n"
 
 new Array:arrayFrequentMessage
-new ArraY:arrayFrequentMessageSent
+new Array:arrayFrequentMessageSent
 
-new Trie:trieChatCommands
+new Trie:trieChatCommandPlugin
+new Trie:trieChatCommandFunction
 
 new bool:gBlockFreqMessage = false
-
-new gMsgTeamInfo, gMsgSayText
 
 new gMaxPlayers
 
@@ -27,9 +26,6 @@ public plugin_init()
 
     register_clcmd("say", "cmdSay")
     register_clcmd("say_team", "cmdSayTeam")
-
-    gMsgTeamInfo = get_user_msgid("TeamInfo")
-    gMsgSayText = get_user_msgid("SayText")
 
     gMaxPlayers = get_maxplayers()
 
@@ -43,40 +39,54 @@ public plugin_natives()
     arrayFrequentMessage = ArrayCreate(32)
     arrayFrequentMessageSent = ArrayCreate(1)
 
-    trieChatCommands = TrieCreate()
+    trieChatCommandPlugin = TrieCreate()
+    trieChatCommandFunction = TrieCreate()
 
     register_native("mg_core_serverid_get", "native_core_serverid_get")
     register_native("ng_core_gamemode_get", "native_core_gamemode_get")
     register_native("mg_core_menu_prefix_get", "native_core_menu_prefix_get")
     register_native("mg_core_menu_title_create", "native_core_menu_title_create")
-    register_native("mg_core_integer_to_formal", "mg_core_integer_to_formal")
     register_native("mg_core_chat_prefix_get", "native_core_chat_prefix_get")
     register_native("mg_core_chatmessage_print", "native_core_chatmessage_print")
+    register_native("mg_core_chatmessage_freq_reg", "native_core_chatmessage_freq_reg")
+    register_native("mg_core_chatmessage_freq_block", "native_core_chatmessage_freq_block")
     register_native("mg_core_command_reg", "native_core_command_reg")
     register_native("mg_core_command_del", "native_core_command_del")
-    register_native("mg_core_message_freq_reg", "native_core_message_freq_reg")
-    register_native("mg_core_message_freq_block", "native_core_message_freq_block")
 }
 
 public cmdSay(id)
 {
     static lMessage[192]
 
-	read_args(lMessage, charsmax(lMessage))
-	remove_quotes(lMessage)
+    read_args(lMessage, charsmax(lMessage))
+    remove_quotes(lMessage)
 
-	if(!lMessage[0] || lMessage[0] == '@' || lMessage[0] == '#')
+    if(!lMessage[0] || lMessage[0] == '@' || lMessage[0] == '#')
 		return PLUGIN_HANDLED
 
-    if(TrieKeyExists(trieChatCommands, lMessage))
-        return PLUGIN_CONTINUE
-	
-	if(message[0] == '/' || message[0] == '!')
+    if(lMessage[0] == '/' || lMessage[0] == '!')
 	{
-		copy(command, charsmax(command), message)
+        if(TrieKeyExists(trieChatCommandPlugin, lMessage[1]))
+        {
+            new lPluginFileName[99], lFunction[50]
+
+            TrieGetString(trieChatCommandPlugin, lMessage[1], lPluginFileName, charsmax(lPluginFileName))
+            TrieGetString(trieChatCommandFunction, lMessage[1], lFunction, charsmax(lFunction))
+
+            triggerFunction(id, lPluginFileName, lFunction)
+            return PLUGIN_HANDLED
+        }
+        
+        new lCommand[22]
+
+        copy(lCommand, charsmax(lCommand), lMessage)
 		
-		eba_cmessage(id, CM_FIX, "%s%L", chatPrefix, id, "CHAT_NOSUCHCOMMAND", command)
-		return PLUGIN_HANDLED
+        lMessage[0] = EOS
+
+        formatex(lMessage, charsmax(lMessage), "%s%L", gPrefixChat, id, "CHAT_NOSUCHCOMMAND", lCommand)
+        print_chatmessage(id, lMessage)
+
+        return PLUGIN_HANDLED
 	}
 
     return PLUGIN_CONTINUE
@@ -112,8 +122,8 @@ public sendFrequentMessage()
             continue
 
         lMessage[0] = EOS
-        formatex(lMessage, charsmax(lMesage), "%s%L", gPrefixChat, i, lMessageLang)
-        printChatMessage(i, lMessage)
+        formatex(lMessage, charsmax(lMessage), "%s%L", gPrefixChat, i, lMessageLang)
+        print_chatmessage(i, lMessage)
     }
 
     if(ArraySize(arrayFrequentMessageSent) > 4)
@@ -122,13 +132,6 @@ public sendFrequentMessage()
     }
 
     set_task(15.0, "sendFrequentMessage")
-}
-
-public native_core_message_freq_block(plugin_id, param_num)
-{
-    gBlockFreqMessage = true
-    
-    return true
 }
 
 public native_core_get_serverid(plugin_id, param_num)
@@ -156,10 +159,10 @@ public native_core_menu_prefix_get(plugin_id, param_num)
 
 public native_core_menu_title_create(plugin_id, param_num)
 {
-    static id, lMenuText[30], lLen, lVersion, lMenuTitle[60]
+    static id, lMenuText[30], lLen, lMenuTitle[60], lVersion
     id = get_param(1)
     lLen = get_param(3)
-    lVersion = get_param(4)
+    lVersion = get_param(6)
 
     get_string(2, lMenuText, lLen)
 
@@ -167,79 +170,55 @@ public native_core_menu_title_create(plugin_id, param_num)
     
     formatex(lMenuTitle, charsmax(lMenuTitle), "\r[%s%L*\y%s\r]", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
 
-    return lMenuTitle
-}
+    lLen = get_param(5)
+    set_string(4, lMenuTitle, lLen)
 
-public native_core_integer_to_formal(plugin_id, param_num)
-{
-    static lInput, lLeft[5], lRight[15], lText[20]
-
-    lInput = get_param(1)
-
-    num_to_str(lInput, lText, charsmax(lText))
-	
-    if(lInput > 999)
-    {	
-        if(lInput>= 1000 && lInput <= 9999)
-            split(lText, lLeft, charsmax(lLeft), lRight, charsmax(lRight), "")
-        else if(lInput >= 10000 && lInput <= 99999)
-            split(lText, lLeft, charsmax(lLeft), lRight, charsmax(lRight), "")
-        else if(lInput >= 100000 && lInput <= 999999)
-            split(lText, lLeft, charsmax(lLeft), lRight, charsmax(lRight), "")
-        else if(lInput >= 1000000 && lInput <= 9999999)
-            split(lText, lLeft, charsmax(lLeft), lRight, charsmax(lRight), "")
-			
-        formatex(lText, 11, "%s.%s", lLeft, lRight)
-		
-        if(lInput > 999999)
-        {
-            split(lText, lLeft, 1, lRight, 11, "")
-            formatex(lText, 11, "%s.%s", lLeft, lRight)
-        }
-    }
-
-    return lText
+    return true
 }
 
 public native_core_chat_prefix_get(plugin_id, param_num)
 {
-    return gPrefixChat
+    new lLen = get_param(2)
+
+    set_string(1, gPrefixChat, lLen)
+
+    return true
 }
 
 public native_core_chatmessage_print(plugin_id, param_num)
 {
-    static id, lInput[191], lChatTeam[20]
+    static lType, lInput[191]
 
-    id = get_param(1)
-    get_string(2, lInput, charsmax(lInput))
-    get_string(3, lChatTeam, charsmax(lChatTeam))
+    lType = get_param(2)
+    get_string(3, lInput, charsmax(lInput))
 
-    printChatMessage(id, lInput, lChatTeam)
-}
+    switch(lType)
+    {
+        case MG_CM_PLAYERTOCHAT:
+        {
+            print_chatmessage(0, lInput)
+        }
+        case MG_CM_FIX:
+        {
+            new id = get_param(1)
+            new lChatTeam = get_param(4)
 
-public native_core_command_reg(plugin_id, param_num)
-{
-    new lCommand[20]
+            print_chatmessage(id, lInput, CsTeams:lChatTeam)
+        }
+        case MG_CM_FIXFREQ:
+        {
+            new id = get_param(1)
+            new CsTeams:lChatTeam = get_param(4)
+            
+            gBlockFreqMessage = true
 
-    get_string(1, lCommand, charsmax(lCommand))
-
-    TrieSetCell(trieChatCommands, lCommand, 69, false)
-
+            print_chatmessage(id, lInput, CsTeams:lChatTeam)
+        }
+    }
     return true
 }
 
-public native_core_command_del(plugin_id, param_num)
-{
-    new lCommand[20]
-
-    get_string(1, lCommand, charsmax(lCommand))
-
-    TrieDeleteKey(trieChatCommands, lCommand)
-
-    return true
-}
-
-public native_core_message_reg(plugin_id, param_num)
+public native_core_chatmessage_reg(plugin_id, param_num)
 {
     new lMessageLang[32]
     get_string(1, lMessageLang, charsmax(lMessageLang))
@@ -256,6 +235,56 @@ public native_core_message_reg(plugin_id, param_num)
     return true
 }
 
+public native_core_chatmessage_freq_block(plugin_id, param_num)
+{
+    gBlockFreqMessage = true
+    
+    return true
+}
+
+public native_core_command_reg(plugin_id, param_num)
+{
+    new lCommand[22], lFunction[50], lPluginFileName[99]
+
+    get_string(1, lCommand, charsmax(lCommand))
+    get_string(2, lFunction, charsmax(lFunction))
+
+    get_plugin(plugin_id, lPluginFileName, charsmax(lPluginFileName))
+
+    TrieSetString(trieChatCommandPlugin, lCommand, lPluginFileName)
+    TrieSetString(trieChatCommandFunction, lCommand, lFunction)
+
+    return true
+}
+
+public native_core_command_del(plugin_id, param_num)
+{
+    new lCommand[20]
+
+    get_string(1, lCommand, charsmax(lCommand))
+
+    return (TrieDeleteKey(trieChatCommandPlugin, lCommand) && TrieDeleteKey(trieChatCommandFunction, lCommand))
+}
+
+public client_command(id)
+{
+    static lCommand[22]
+    read_argv(0, lCommand, charsmax(lCommand))
+
+    if(TrieKeyExists(trieChatCommandPlugin, lCommand))
+    {
+        new lPluginFileName[99], lFunction[50]
+
+        TrieGetString(trieChatCommandPlugin, lCommand, lPluginFileName, charsmax(lPluginFileName))
+        TrieGetString(trieChatCommandFunction, lCommand, lFunction, charsmax(lFunction))
+
+        triggerFunction(id, lPluginFileName, lFunction)
+        return PLUGIN_HANDLED
+    }
+
+    return PLUGIN_CONTINUE
+}
+
 public fwFmGetGameDescription()
 {
    	forward_return(FMV_STRING, MG_SERVER_GAMEMODE)
@@ -263,65 +292,9 @@ public fwFmGetGameDescription()
 	return FMRES_SUPERCEDE
 }
 
-stock printChatMessage(id, input, chatTeam[] = "U")
+triggerFunction(id, const pluginFileName[], const function[])
 {
-    static lPlayerTeam[20]
-
-    replace_all(input, 190, "%", "%%")
-
-    if(id)
-	{
-        if(lChatTeam[0] != "U")
-		{
-			get_user_team(id, lPlayerTeam, charsmax(lPlayerTeam))
-					
-			message_begin(MSG_ONE_UNRELIABLE, gMsgTeamInfo, _, id)
-			write_byte(id)
-			write_string(lChatTeam)
-			message_end()
-		}
-					
-        message_begin(MSG_ONE_UNRELIABLE, gMsgSayText, _, id)
-        write_byte(id)
-        write_string(lInput)
-        message_end()
-					
-        if(lChatTeam[0] != "U")
-		{
-			message_begin(MSG_ONE_UNRELIABLE, gMsgTeamInfo, _, id)
-			write_byte(id)
-			write_string(lPlayerTeam)
-			message_end()
-        }
-
-        return PLUGIN_HANDLED
-	}
-	
-    for(new i = 1; i <= gMaxPlayers; i++)
-	{
-		if(lChatTeam[0] != "U")
-		{
-			get_user_team(i, lPlayerTeam, charsmax(lPlayerTeam))
-					
-			message_begin(MSG_ONE_UNRELIABLE, gMsgTeamInfo, _, i)
-			write_byte(i)
-			write_string(lChatTeam)
-			message_end()
-        }
-
-		message_begin(MSG_ONE_UNRELIABLE, gMsgSayText, _, i)
-		write_byte(i)
-		write_string(lInput)
-		message_end()
-					
-		if(lChatTeam[0] != "U")
-		{
-			message_begin(MSG_ONE_UNRELIABLE, gMsgTeamInfo, _, i)
-			write_byte(i)
-			write_string(lPlayerTeam)
-			message_end()
-		}
-	}
-
-    return PLUGIN_HANDLED
+    callfunc_begin(function, pluginFileName)
+    callfunc_push_int(id)
+    callfunc_end()
 }
