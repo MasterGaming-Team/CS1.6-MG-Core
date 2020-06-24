@@ -25,7 +25,7 @@ public plugin_init()
     register_plugin(PLUGIN, VERSION, AUTH)
 
     register_clcmd("say", "cmdSay")
-    register_clcmd("say_team", "cmdSayTeam")
+    register_clcmd("say_team", "cmdSay")
 
     gMaxPlayers = get_maxplayers()
 
@@ -136,7 +136,7 @@ public sendFrequentMessage()
 
 public native_core_get_serverid(plugin_id, param_num)
 {
-    return MG_SERVER_ZOMBIEINSANITY
+    return MG_SERVER_CURRENT
 }
 
 public native_core_gamemode_get(plugin_id, param_num)
@@ -161,17 +161,16 @@ public native_core_menu_title_create(plugin_id, param_num)
 {
     static id, lMenuText[30], lLen, lMenuTitle[60], lVersion
     id = get_param(1)
-    lLen = get_param(3)
-    lVersion = get_param(6)
+    lVersion = get_param(5)
 
-    get_string(2, lMenuText, lLen)
+    get_string(2, lMenuText, charsmax(lMenuText))
 
     lMenuTitle[0] = EOS
     
     formatex(lMenuTitle, charsmax(lMenuTitle), "\r[%s%L*\y%s\r]", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
 
-    lLen = get_param(5)
-    set_string(4, lMenuTitle, lLen)
+    lLen = get_param(4)
+    set_string(3, lMenuTitle, lLen)
 
     return true
 }
@@ -190,28 +189,53 @@ public native_core_chatmessage_print(plugin_id, param_num)
     static lType, lInput[191]
 
     lType = get_param(2)
-    get_string(3, lInput, charsmax(lInput))
 
     switch(lType)
     {
         case MG_CM_PLAYERTOCHAT:
         {
+            get_string(4, lInput, charsmax(lInput))
             print_chatmessage(0, lInput)
         }
         case MG_CM_FIX:
         {
             new id = get_param(1)
-            new lChatTeam = get_param(4)
+            new lChatTeam = get_param(3)
+
+            
+            vdformat(lInput, charsmax(lInput), 4, 5)
+            format(lInput, charsmax(lInput), "%s%s", gPrefixChat, lInput)
 
             print_chatmessage(id, lInput, CsTeams:lChatTeam)
         }
         case MG_CM_FIXFREQ:
         {
             new id = get_param(1)
-            new CsTeams:lChatTeam = get_param(4)
+            new CsTeams:lChatTeam = get_param(3)
             
             gBlockFreqMessage = true
 
+            vdformat(lInput, charsmax(lInput), 4, 5)
+            format(lInput, charsmax(lInput), "%s%s", gPrefixChat, lInput)
+
+            print_chatmessage(id, lInput, CsTeams:lChatTeam)
+        }
+        case MG_CM_NORMAL:
+        {
+            new id = get_param(1)
+            new lChatTeam = get_param(3)
+            
+            vdformat(lInput, charsmax(lInput), 4, 5)
+            print_chatmessage(id, lInput, CsTeams:lChatTeam)
+        }
+        case MG_CM_NORMALFREQ:
+        {
+            new id = get_param(1)
+            new lChatTeam = get_param(3)
+
+            gBlockFreqMessage = true
+
+            vdformat(lInput, charsmax(lInput), 4, 5)
             print_chatmessage(id, lInput, CsTeams:lChatTeam)
         }
     }
