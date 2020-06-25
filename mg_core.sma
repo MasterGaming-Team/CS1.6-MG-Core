@@ -134,7 +134,7 @@ public sendFrequentMessage()
     set_task(15.0, "sendFrequentMessage")
 }
 
-public native_core_get_serverid(plugin_id, param_num)
+public native_core_serverid_get(plugin_id, param_num)
 {
     return MG_SERVER_CURRENT
 }
