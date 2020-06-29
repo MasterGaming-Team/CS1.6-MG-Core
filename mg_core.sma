@@ -7,7 +7,7 @@
 #define VERSION "1.0"
 #define AUTH "Vieni"
 
-new gPrefixMenu[] = "\d*MG* \r| \y"
+new gPrefixMenu[] = "\dMasterGaming\r| \y"
 new gPrefixChat[] = "!g[*MG*] !n"
 
 new Array:arrayFrequentMessage
@@ -104,11 +104,17 @@ public sendFrequentMessage()
     new lArrayId
     new lArraySize = ArraySize(arrayFrequentMessage)
 
+    if(!lArraySize)
+    {
+        set_task(15.0, "sendFrequentMessage")
+        return
+    }
+
     do
     {
         lArrayId = random_num(0, lArraySize-1)
     }
-    while(ArrayFindValue(arrayFrequentMessageSent, lArrayId))
+    while(ArrayFindValue(arrayFrequentMessageSent, lArrayId) && ArraySize(arrayFrequentMessageSent) < lArraySize)
 
     ArrayPushCell(arrayFrequentMessageSent, lArrayId)
 
@@ -201,7 +207,6 @@ public native_core_chatmessage_print(plugin_id, param_num)
         {
             new id = get_param(1)
             new lChatTeam = get_param(3)
-
             
             vdformat(lInput, charsmax(lInput), 4, 5)
             format(lInput, charsmax(lInput), "%s%s", gPrefixChat, lInput)
@@ -242,7 +247,7 @@ public native_core_chatmessage_print(plugin_id, param_num)
     return true
 }
 
-public native_core_chatmessage_reg(plugin_id, param_num)
+public native_core_chatmessage_freq_reg(plugin_id, param_num)
 {
     new lMessageLang[32]
     get_string(1, lMessageLang, charsmax(lMessageLang))
