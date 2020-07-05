@@ -178,7 +178,7 @@ public native_core_menu_title_create(plugin_id, param_num)
     lLen = get_param(4)
     set_string(3, lMenuTitle, lLen)
 
-    return true
+    return strlen(lMenuTitle)
 }
 
 public native_core_chat_prefix_get(plugin_id, param_num)
@@ -216,7 +216,7 @@ public native_core_chatmessage_print(plugin_id, param_num)
         case MG_CM_FIXFREQ:
         {
             new id = get_param(1)
-            new CsTeams:lChatTeam = get_param(3)
+            new CsTeams:lChatTeam = CsTeams:get_param(3)
             
             gBlockFreqMessage = true
 
