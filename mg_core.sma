@@ -326,3 +326,4 @@ triggerFunction(id, const pluginFileName[], const function[])
     callfunc_begin(function, pluginFileName)
     callfunc_push_int(id)
     callfunc_end()
+
