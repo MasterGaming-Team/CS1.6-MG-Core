@@ -207,7 +207,7 @@ public native_core_chatmessage_print(plugin_id, param_num)
         {
             new id = get_param(1)
             new lChatTeam = get_param(3)
-            
+
             vdformat(lInput, charsmax(lInput), 4, 5)
             format(lInput, charsmax(lInput), "%s%s", gPrefixChat, lInput)
 
