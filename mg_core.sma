@@ -165,7 +165,7 @@ public native_core_menu_prefix_get(plugin_id, param_num)
 
 public native_core_menu_title_create(plugin_id, param_num)
 {
-    static id, lMenuText[30], lLen, lMenuTitle[60], lVersion
+    static id, lMenuText[64], lLen, lMenuTitle[128], lVersion
     id = get_param(1)
     lVersion = get_param(5)
 
@@ -173,7 +173,7 @@ public native_core_menu_title_create(plugin_id, param_num)
 
     lMenuTitle[0] = EOS
     
-    formatex(lMenuTitle, charsmax(lMenuTitle), "\r[%s%L*\y%s\r]^n", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
+    formatex(lMenuTitle, charsmax(lMenuTitle), "\r[%s%L*\d%s\r]^n", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
 
     lLen = get_param(4)
     set_string(3, lMenuTitle, lLen)
