@@ -7,7 +7,7 @@
 #define VERSION "1.0"
 #define AUTH "Vieni"
 
-new gPrefixMenu[] = "\dMasterGaming\r| \y"
+new gPrefixMenu[] = "\dMasterGaming\r|\y"
 new gPrefixChat[] = "!g[*MG*] !n"
 
 new Array:arrayFrequentMessage
@@ -173,7 +173,7 @@ public native_core_menu_title_create(plugin_id, param_num)
 
     lMenuTitle[0] = EOS
     
-    formatex(lMenuTitle, charsmax(lMenuTitle), "\r[%s%L*\d%s\r]^n", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
+    formatex(lMenuTitle, charsmax(lMenuTitle), "\r[ %s%L*\d%s \r]^n", gPrefixMenu, id, lMenuText, lVersion ? MG_SERVER_VERSION:"")
 
     lLen = get_param(4)
     set_string(3, lMenuTitle, lLen)
